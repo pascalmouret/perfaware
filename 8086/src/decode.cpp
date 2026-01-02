@@ -1,8 +1,7 @@
 #include <cstdio>
 #include <cstring>
 #include <stdint.h>
-
-const size_t BUFF_SIZE = 1024;
+#include "../include/8086.h"
 
 const uint8_t OP_MOV_REG = 0b100010;
 const uint8_t OP_MOV_REG_IMM = 0b1011;
@@ -85,12 +84,16 @@ const char* rm_str(uint8_t rm) {
 	return "";
 }
 
-uint16_t decode_val(uint8_t buff[], bool is_wide) {
+uint16_t decode_val(Stream* stream, bool is_wide) {
 	if (is_wide) {
-		return ((uint16_t)buff[1] << 8) | buff[0];
+		uint8_t bytes[2];
+		read_bytes(stream, bytes, 2);
+		return ((uint16_t)bytes[1] << 8) | bytes[0];
 	}
 	else {
-		return (uint16_t)buff[0];
+		uint8_t byte;
+		read_bytes(stream, &byte, 1);
+		return (uint16_t)byte;
 	}
 }
 
@@ -101,15 +104,16 @@ int16_t small_disp(uint16_t disp) {
 	return disp;
 }
 
-int decode_mov_reg(uint8_t buff[]) {
+void decode_mov_reg(Stream* stream) {
+	uint8_t buff[2];
+	size_t read = read_bytes(stream, buff, 2);
+	
 	bool is_destination = (buff[0] & 0b10) > 0;
 	bool is_wide = (buff[0] & 0b1) > 0;
+
 	uint8_t mod = buff[1] >> 6;
 	uint8_t reg = buff[1] >> 3 & 0b111;
 	uint8_t rm = buff[1] & 0b111;
-
-	const char* dest;
-	const char* src;
 
 	if (mod == MOD_REG) {
 		if (is_destination) {
@@ -118,17 +122,15 @@ int decode_mov_reg(uint8_t buff[]) {
 		else {
 			printf("mov %s, %s\n", reg_str(rm, is_wide), reg_str(reg, is_wide));
 		}
-		return 2;
 	}
 	else if (mod == MOD_D0) {
 		if (rm == RM_BP) {
 			if (is_destination) {
-				printf("mov %s, [%u]\n", reg_str(reg, is_wide), decode_val(&buff[2], true));
+				printf("mov %s, [%u]\n", reg_str(reg, is_wide), decode_val(stream, true));
 			}
 			else {
-				printf("mov [%u], %s\n", decode_val(&buff[2], true), reg_str(reg, is_wide));
+				printf("mov [%u], %s\n", decode_val(stream, true), reg_str(reg, is_wide));
 			}
-			return is_wide ? 4 : 3;
 		}
 		else {
 			if (is_destination) {
@@ -137,47 +139,46 @@ int decode_mov_reg(uint8_t buff[]) {
 			else {
 				printf("mov [%s], %s\n", rm_str(rm), reg_str(reg, is_wide));
 			}
-			return 2;
 		}
 	}
 	else if (mod == MOD_D8 || mod == MOD_D16) {
-		int16_t val = small_disp(decode_val(&buff[2], mod == MOD_D16));
+		int16_t val = small_disp(decode_val(stream, mod == MOD_D16));
 		if (is_destination) {
 			printf("mov %s, [%s %+d]\n", reg_str(reg, is_wide), rm_str(rm), val);
 		}
 		else {
 			printf("mov [%s %+d], %s\n", rm_str(rm), val, reg_str(reg, is_wide));
 		}
-		return mod == MOD_D16 ? 4 : 3;	
 	}
-
-	return 0;
 }
 
-int decode_mov_mem_imm(uint8_t buff[]) {
+void decode_mov_mem_imm(Stream* stream) {
+	uint8_t buff[2];
+	read_bytes(stream, buff, 2);
+
 	bool is_wide = (buff[0] & 0b1) > 0;
 	uint8_t mod = buff[1] >> 6;
 	uint8_t rm = buff[1] & 0b111;
-	// mod can be used as length of displacement
-	uint16_t val = decode_val(&buff[mod + 2], is_wide);
 
 	if (mod == MOD_D0) {
+		uint16_t val = decode_val(stream, is_wide);
 		printf("mov [%s], %s %u\n", rm_str(rm), is_wide ? "word" : "byte", val);
-		return 3 + is_wide;
 	}
 	else if (mod == MOD_D8 || mod == MOD_D16) {
-		int16_t disp = small_disp(decode_val(&buff[2], mod == MOD_D16));
-		printf("mov [%s %+d], %s %u\n", rm_str(rm), disp, is_wide ? "word" : "byte", val);
-		return 3 + mod + is_wide;
-	}
+		int16_t disp = small_disp(decode_val(stream, mod == MOD_D16));
+		uint16_t val = decode_val(stream, is_wide);
 
-	return 0;
+		printf("mov [%s %+d], %s %u\n", rm_str(rm), disp, is_wide ? "word" : "byte", val);
+	}
 }
 
-int decode_mov_mem_agg(uint8_t buff[]) {
-	bool is_to_mem = (buff[0] & 0b10) > 0;
-	bool is_wide = (buff[0] & 0b1) > 0;
-	uint16_t adr = decode_val(&buff[1], true);
+void decode_mov_mem_agg(Stream* stream) {
+	uint8_t cmd;
+	read_bytes(stream, &cmd, 1);
+
+	bool is_to_mem = (cmd & 0b10) > 0;
+	bool is_wide = (cmd & 0b1) > 0;
+	uint16_t adr = decode_val(stream, true);
 
 	if (is_to_mem) {
 		printf("mov [%u], %s\n", adr, is_wide ? "ax" : "al");
@@ -185,69 +186,66 @@ int decode_mov_mem_agg(uint8_t buff[]) {
 	else {
 		printf("mov %s, [%u]\n", is_wide ? "ax" : "al", adr);
 	}
-
-	return 3;
 }
 
-int decode_mov_reg_imm(uint8_t buff[]) {
-	bool is_wide = (buff[0] & 0b1000) > 0;
-	uint8_t reg = buff[0] & 0b111;
-	uint16_t val = decode_val(&buff[1], is_wide);
+int decode_mov_reg_imm(Stream* stream) {
+	uint8_t opts;
+	read_bytes(stream, &opts, 1);
+
+	bool is_wide = (opts & 0b1000) > 0;
+	uint8_t reg = opts & 0b111;
+	uint16_t val = decode_val(stream, is_wide);
 
 	printf("mov %s, %u\n", reg_str(reg, is_wide), val);
 
-	return is_wide ? 3 : 2;
+	return 0;
 }
 
-int decode_next(uint8_t buff[]) {
-	if (buff[0] >> 2 == OP_MOV_REG) {
-		return decode_mov_reg(buff);
+int decode_next(Stream* stream) {
+	uint8_t opcode;
+	peek_bytes(stream, &opcode, 1);
+
+	if (opcode >> 2 == OP_MOV_REG) {
+		decode_mov_reg(stream);
 	}
-	else if (buff[0] >> 4 == OP_MOV_REG_IMM) {
-		return decode_mov_reg_imm(buff);
+	else if (opcode >> 4 == OP_MOV_REG_IMM) {
+		decode_mov_reg_imm(stream);
 	}
-	else if (buff[0] >> 1 == OP_MOV_MEM_IMM) {
-		return decode_mov_mem_imm(buff);
+	else if (opcode >> 1 == OP_MOV_MEM_IMM) {
+		decode_mov_mem_imm(stream);
 	}
-	else if (buff[0] >> 2 == OP_MOV_MEM_AGG) {
-		return decode_mov_mem_agg(buff);
+	else if (opcode >> 2 == OP_MOV_MEM_AGG) {
+		decode_mov_mem_agg(stream);
 	}
+	else {
+		return 1;
+	}
+
 	return 0;
 }
 
 int main(int argc, char* argv[]) {
-	FILE* in_file = fopen(argv[1], "r");
+	Stream stream = open(argv[1]);
 
-	if (in_file == 0) {
+	if (stream.eof) {
 		printf("Failed to open input file");
 		return 1;
 	}
 
 	printf("bits 16\n\n");
 
-	uint8_t buff[BUFF_SIZE];
-	size_t read_bytes = 0;
-	while(true) {
-		read_bytes = fread(buff, 1, BUFF_SIZE, in_file);
+	while(stream.eof == false) {
+		int result = decode_next(&stream);
 
-		size_t result = 0;
-		int index = 0;
-		while (index < read_bytes) {
-			result = decode_next(&buff[index]);
-			if (result == 0) {
-				printf("Failed to decode instruction %x", buff[index]);
-				return 1;
-			}
-			index += result;
-
+		if (result != 0) {
+			uint8_t op;
+			read_bytes(&stream, &op, 1);
+			printf("Failed to decode instruction: %x\n", op);
+			return 1;
 		}
+	};
 
-		if (read_bytes < BUFF_SIZE) {
-			break;
-		}
-	}
-
-	fclose(in_file);
+	close(&stream);
 
 	return 0;
 }
