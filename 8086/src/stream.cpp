@@ -4,7 +4,7 @@
 #include "../include/8086.h"
 
 Stream open(const char path[]) {
-	struct Stream result;
+	Stream result;
 	
 	result.index = 0;
 	result.buff_length = 0;
