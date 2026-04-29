@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include "../include/8086.h"
+#include "./include/8086.h"
 
 Stream open(const char path[]) {
 	Stream result;

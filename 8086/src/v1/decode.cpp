@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <cstring>
 #include <stdint.h>
-#include "../include/8086.h"
+#include "./include/8086.h"
 
 const uint8_t OP_MOV_REG = 0b100010;
 const uint8_t OP_MOV_REG_IMM = 0b1011;
