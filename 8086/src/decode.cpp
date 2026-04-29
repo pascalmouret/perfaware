@@ -23,6 +23,32 @@ const uint8_t OP_SUB_ACC = OP_ACC_PATTERN | (OP_SUB_PATTERN << 2);
 const uint8_t OP_CMP_MEM_REG = OP_MEM_REG_PATTERN | (OP_CMP_PATTERN << 1);
 const uint8_t OP_CMP_ACC = OP_ACC_PATTERN | (OP_CMP_PATTERN << 2);
 
+const uint8_t OP_JMP_PATTERN = 0b0111;
+
+const uint8_t OP_JE = (OP_JMP_PATTERN << 4) | 0b0100;
+const uint8_t OP_JL = (OP_JMP_PATTERN << 4) | 0b1100;
+const uint8_t OP_JLE = (OP_JMP_PATTERN << 4) | 0b1110;
+const uint8_t OP_JB = (OP_JMP_PATTERN << 4) | 0b0010;
+const uint8_t OP_JBE = (OP_JMP_PATTERN << 4) | 0b0110;
+const uint8_t OP_JP = (OP_JMP_PATTERN << 4) | 0b1010;
+const uint8_t OP_JO = (OP_JMP_PATTERN << 4) | 0b0000;
+const uint8_t OP_JS = (OP_JMP_PATTERN << 4) | 0b1000;
+const uint8_t OP_JNE = (OP_JMP_PATTERN << 4) | 0b0101;
+const uint8_t OP_JNL = (OP_JMP_PATTERN << 4) | 0b1101;
+const uint8_t OP_JG = (OP_JMP_PATTERN << 4) | 0b1111;
+const uint8_t OP_JNB = (OP_JMP_PATTERN << 4) | 0b0011;
+const uint8_t OP_JA = (OP_JMP_PATTERN << 4) | 0b0111;
+const uint8_t OP_JNP = (OP_JMP_PATTERN << 4) | 0b1011;
+const uint8_t OP_JNO = (OP_JMP_PATTERN << 4) | 0b0001;
+const uint8_t OP_JNS = (OP_JMP_PATTERN << 4) | 0b1001;
+
+const uint8_t OP_LOOP_PATTERN = 0b1110;
+
+const uint8_t OP_LOOP = (OP_LOOP_PATTERN << 4) | 0b0010;
+const uint8_t OP_LOOPZ = (OP_LOOP_PATTERN << 4) | 0b0001;
+const uint8_t OP_LOOPNZ = (OP_LOOP_PATTERN << 4) | 0b0000;
+const uint8_t OP_JCXZ = (OP_LOOP_PATTERN << 4) | 0b0011;
+
 const uint8_t MOD_D0 = 0b00;
 const uint8_t MOD_D8 = 0b01;
 const uint8_t MOD_D16 = 0b10;
@@ -354,6 +380,75 @@ void decode_acc_op(Stream* stream) {
 	printf("%s %s, %u\n", op_pattern_str(op), is_wide ? "ax" : "al", val);
 }
 
+void decode_jmp_or_loop(Stream* stream) {
+	uint8_t cmd;
+	read_bytes(stream, &cmd, 1);
+	int8_t disp = decode_sval(stream, false) + 2;
+
+	switch (cmd) {
+		case OP_JE:
+			printf("je $%+d\n", disp);
+			break;
+		case OP_JL:
+			printf("jl $%+d\n", disp);
+			break;
+		case OP_JLE:
+			printf("jle $%+d\n", disp);
+			break;
+		case OP_JB:
+			printf("jb $%+d\n", disp);
+			break;
+		case OP_JBE:
+			printf("jbe $%+d\n", disp);
+			break;
+		case OP_JP:
+			printf("jp $%+d\n", disp);
+			break;
+		case OP_JO:
+			printf("jo $%+d\n", disp);
+			break;
+		case OP_JS:
+			printf("js $%+d\n", disp);
+			break;
+		case OP_JNE:
+			printf("jne $%+d\n", disp);
+			break;
+		case OP_JNL:
+			printf("jnl $%+d\n", disp);
+			break;
+		case OP_JG:
+			printf("jg $%+d\n", disp);
+			break;
+		case OP_JNB:
+			printf("jnb $%+d\n", disp);
+			break;
+		case OP_JA:
+			printf("ja $%+d\n", disp);
+			break;
+		case OP_JNP:
+			printf("jnp $%+d\n", disp);
+			break;
+		case OP_JNO:
+			printf("jno $%+d\n", disp);
+			break;
+		case OP_JNS:
+			printf("jns $%+d\n", disp);
+			break;
+		case OP_LOOP:
+			printf("loop $%+d\n", disp);
+			break;
+		case OP_LOOPZ:
+			printf("loopz $%+d\n", disp);
+			break;
+		case OP_LOOPNZ:
+			printf("loopnz $%+d\n", disp);
+			break;
+		case OP_JCXZ:
+			printf("jcxz $%+d\n", disp);
+			break;
+	}
+}
+
 int decode_next(Stream* stream) {
 	uint8_t opcode;
 	peek_bytes(stream, &opcode, 1);
@@ -386,6 +481,12 @@ int decode_next(Stream* stream) {
 		|| opcode >> 1 == OP_CMP_ACC
 	) {
 		decode_acc_op(stream);
+	}
+	else if (
+		opcode >> 4 == OP_JMP_PATTERN
+		|| opcode >> 4 == OP_LOOP_PATTERN
+	) {
+		decode_jmp_or_loop(stream);
 	}
 	else {
 		return 1;
