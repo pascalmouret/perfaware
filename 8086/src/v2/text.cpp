@@ -8,6 +8,7 @@ const char* get_memonic(Opcode opcode) {
     switch (opcode) {
         case OP_MOV: return "mov";
         case OP_ADD: return "add";
+        case OP_SUB: return "sub";
     }
 }
 

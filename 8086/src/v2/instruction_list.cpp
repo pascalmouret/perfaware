@@ -33,6 +33,10 @@ static InstructionDescription instruction_list[] = {
     OP(OP_ADD, BITS(0b000000, 6), D, W, MOD, REG, RM),
     OP(OP_ADD, BITS(0b100000, 6), S, W, MOD, BITS(0b000, 3), RM, DATA, DATA_W),
     OP(OP_ADD, BITS(0b0000010, 7), W, DATA, DATA_W, IMP_REG(0), IMP_D(1)),
+
+    OP(OP_SUB, BITS(0b010100, 6), D, W, MOD, REG, RM),
+    OP(OP_SUB, BITS(0b100000, 6), S, W, MOD, BITS(0b101, 3), RM, DATA, DATA_W),
+    OP(OP_SUB, BITS(0b0010110, 7), W, DATA, DATA_W, IMP_REG(0), IMP_D(1)),
 };
 
 DescriptionList get_description_list() {

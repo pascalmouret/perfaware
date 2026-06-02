@@ -5,6 +5,7 @@
 enum Opcode {
     OP_MOV,
     OP_ADD,
+    OP_SUB,
 };
 
 enum Register {
