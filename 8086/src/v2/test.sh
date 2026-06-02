@@ -17,3 +17,4 @@ printf "\n"
 nasm ./dist/test_result.asm
 xxd -b ./dist/test_result
 
+cmp -l ./dist/test_instruction ./dist/test_result

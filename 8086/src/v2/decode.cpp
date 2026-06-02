@@ -61,25 +61,25 @@ s32 parse_value(MemAccess* access, bool exists, bool is_wide, bool is_signed) {
     }
 
     if (is_wide) {
-        u32 raw = (u32)access_memory(access)[1] << 8 | (u32)access_memory(access)[0];
+        u32 raw = (u32)access_memory(*access)[1] << 8 | (u32)access_memory(*access)[0];
         s32 result = is_signed ? (s32)(s16)raw : (s32)raw;
         access->offset += 2;
         return result;
     }
     else {
-        u32 raw = access_memory(access)[0];
+        u32 raw = access_memory(*access)[0];
         s32 result = is_signed ? (s32)(s8)raw : (s32)raw;
         access->offset += 1;
         return result;
     }
 }
 
-Instruction attempt_decode(MemAccess* access, InstructionDescription* description) {
+Instruction attempt_decode(MemAccess access, InstructionDescription* description) {
     int bit_index = 7;
     int part_index = 0;
     bool is_valid = true;
 
-    u32 first_address = absolute_address(access->segment, access->offset);
+    u32 first_address = absolute_address(access.segment, access.offset);
 
     InstructionData data = {};
 
@@ -102,6 +102,10 @@ Instruction attempt_decode(MemAccess* access, InstructionDescription* descriptio
                 break;
             case DT_DEST_FLAG:
                 data.is_dest = get_bit(byte, bit_index);
+                bit_index--;
+                break;
+            case DT_SIGN_FLAG:
+                data.is_signed = get_bit(byte, bit_index);
                 bit_index--;
                 break;
             case DT_MOD:
@@ -160,11 +164,11 @@ Instruction attempt_decode(MemAccess* access, InstructionDescription* descriptio
 
         if (bit_index < 0) {
             bit_index = 7;
-            access->offset += 1;
+            access.offset += 1;
             byte = access_memory(access);
         }
 
-        if (absolute_address(access->segment, access->offset) - first_address >= 15) {
+        if (absolute_address(access.segment, access.offset) - first_address >= 15) {
             is_valid = false;
             break;
         }
@@ -179,18 +183,18 @@ Instruction attempt_decode(MemAccess* access, InstructionDescription* descriptio
         bool has_reg = data.has_reg;
         bool has_mod = data.has_mod;
         bool has_data = data.has_data;
-        bool data_is_wide = data.has_wide_data && data.is_wide;
+        bool data_is_wide = data.has_wide_data && data.is_wide && !data.is_signed;
         bool has_direct_address = data.mod == 0b00 && data.rm == 0b110;
         bool has_displacement = data.mod == 0b01 || data.mod == 0b10;
 
-        s32 direct_address = parse_value(access, has_direct_address, is_wide, is_signed);
-        s32 displacement = parse_value(access, has_displacement, data.mod == 0b10, true);
-        s32 data_value = parse_value(access, has_data, data_is_wide, is_signed);
+        s32 direct_address = parse_value(&access, has_direct_address, is_wide, is_signed);
+        s32 displacement = parse_value(&access, has_displacement, data.mod == 0b10, true);
+        s32 data_value = parse_value(&access, has_data, data_is_wide, is_signed);
 
         Instruction result;
 
         result.address = first_address;
-        result.size = absolute_address(access->segment, access->offset) - first_address + 1;
+        result.size = absolute_address(access.segment, access.offset) - first_address;
         result.opcode = description->opcode;
         result.source = Operand{OP_T_NONE, REG_NONE};
         result.destination = Operand{OP_T_NONE, REG_NONE};
@@ -198,10 +202,6 @@ Instruction attempt_decode(MemAccess* access, InstructionDescription* descriptio
 
         Operand *reg_op = &(is_dest ? result.destination : result.source);
         Operand *mod_op = &(is_dest ? result.source : result.destination);
-
-        printf("; has_reg %u\n", has_reg);
-        printf("; has_mod %u\n", has_mod);
-        printf("; is_dest %u\n", is_dest);
 
         if (has_reg) {
             *reg_op = Operand{OP_T_REG, reg_lookup[data.reg][is_wide]};
@@ -256,7 +256,7 @@ Instruction attempt_decode(MemAccess* access, InstructionDescription* descriptio
     return Instruction{0, 0, OP_MOV};
 }
 
-Instruction decode(MemAccess* access) {
+Instruction decode(MemAccess access) {
     for (int i = 0; i < instructions.length; i++) {
         Instruction result = attempt_decode(access, &instructions.instructions[i]);
         if (result.size > 0) {

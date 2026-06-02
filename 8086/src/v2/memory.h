@@ -18,6 +18,6 @@ typedef struct {
 
 u32 absolute_address(u16 segment, u16 offset);
 u32 maxAddress(Memory* memory);
-u8* access_memory(MemAccess* mem);
+u8* access_memory(MemAccess mem);
 u8* access_memory(Memory* memory, u32 absoluteAddress);
-size_t load_from_file(MemAccess* mem, u8* path);
+size_t load_from_file(MemAccess mem, u8* path);

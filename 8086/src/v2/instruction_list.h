@@ -8,6 +8,7 @@ enum PartType {
     DT_BITS,
     DT_WIDE_FLAG,
     DT_DEST_FLAG,
+    DT_SIGN_FLAG,
     DT_MOD,
     DT_REG,
     DT_RM,

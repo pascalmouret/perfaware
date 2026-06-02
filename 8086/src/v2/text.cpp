@@ -33,19 +33,21 @@ const char* get_reg(Register reg) {
     }
 }
 
-void print_operand(Operand* operand) {
+void print_operand(Operand* operand, bool is_sized, bool is_wide) {
+    if (is_sized) {
+        if (is_wide) {
+            printf("word ");
+        }
+        else {
+            printf("byte ");
+        }
+    }
+
     switch (operand->type) {
         case OP_T_REG:
             printf("%s", get_reg(operand->reg.reg));
             break;
         case OP_T_IMMEDIATE:
-            if (operand->immediate.is_wide) {
-                printf("word ");
-            }
-            else {
-                printf("byte ");
-            }
-
             if (operand->immediate.is_signed) {
                 printf("%+d", operand->immediate.value);
             }
@@ -73,14 +75,17 @@ void print_operand(Operand* operand) {
 void print_instruction(Instruction* instruction) {
     printf("%s", get_memonic(instruction->opcode));
 
+    bool is_sized = instruction->destination.type != OP_T_REG;
+    bool is_wide = instruction->flags.is_wide;
+
     if (instruction->destination.type != OP_T_NONE) {
         printf(" ");
-        print_operand(&instruction->destination);
+        print_operand(&instruction->destination, is_sized, is_wide);
     }
 
     if (instruction->source.type != OP_T_NONE) {
         printf(", ");
-        print_operand(&instruction->source);
+        print_operand(&instruction->source, is_sized, is_wide);
     }
 
     printf("\n");
@@ -110,7 +115,7 @@ void debug_operand(Operand* operand) {
 
 void debug_instruction(Instruction* instruction) {
     printf("; ");
-    printf("%s", get_memonic(instruction->opcode));
+    printf("%u:%u %s", instruction->address, instruction->address + instruction->size - 1, get_memonic(instruction->opcode));
     printf(" ");
     debug_operand(&instruction->destination);
     printf(", ");
@@ -118,20 +123,22 @@ void debug_instruction(Instruction* instruction) {
     printf("\n");
 }
 
-void print_instructions(MemAccess* access, size_t length) {
+void print_instructions(MemAccess access, size_t length) {
     printf("bits 16\n\n");
 
-    int initial_offset = access->offset;
+    int initial_offset = access.offset;
 
-    while (access->offset < initial_offset + length) {
+    while (access.offset < initial_offset + length) {
         Instruction instruction = decode(access);
 
         if (instruction.size == 0) {
-            fprintf(stderr, "ERROR: Failed to decode instruction at %u\n", absolute_address(access->segment, access->offset));
+            fprintf(stderr, "ERROR: Failed to decode instruction at %u\n", absolute_address(access.segment, access.offset));
             exit(1);
         }
 
         debug_instruction(&instruction);
         print_instruction(&instruction);
+
+        access.offset += instruction.size;
     }
 }

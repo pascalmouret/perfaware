@@ -6,6 +6,7 @@
 #define BITS(Pattern, Size) Part{DT_BITS, {BitPattern{Pattern, Size}}}
 #define D Part{DT_DEST_FLAG}
 #define W Part{DT_WIDE_FLAG}
+#define S Part{DT_SIGN_FLAG}
 #define MOD Part{DT_MOD}
 #define REG Part{DT_REG}
 #define RM Part{DT_RM}
@@ -28,6 +29,10 @@ static InstructionDescription instruction_list[] = {
     OP(OP_MOV, BITS(0b1010000, 7), W, ADDR_LO, ADDR_HI, IMP_D(1), IMP_REG(0), IMP_MOD(0), IMP_RM(0b110)),
     OP(OP_MOV, BITS(0b1010001, 7), W, ADDR_LO, ADDR_HI, IMP_D(0), IMP_REG(0), IMP_MOD(0), IMP_RM(0b110)),
     OP(OP_MOV, BITS(0b100011, 5), D, BITS(0b0, 1), MOD, BITS(0, 1), SR, RM, IMP_W(1)),
+
+    OP(OP_ADD, BITS(0b000000, 6), D, W, MOD, REG, RM),
+    OP(OP_ADD, BITS(0b100000, 6), S, W, MOD, BITS(0b000, 3), RM, DATA, DATA_W),
+    OP(OP_ADD, BITS(0b0000010, 7), W, DATA, DATA_W, IMP_REG(0), IMP_D(1)),
 };
 
 DescriptionList get_description_list() {
@@ -43,6 +48,7 @@ DescriptionList get_description_list() {
 #undef PATTERN
 #undef D
 #undef W
+#undef S
 #undef MOD
 #undef REG
 #undef RM

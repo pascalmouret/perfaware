@@ -3,4 +3,4 @@
 #include "instruction.h"
 #include "memory.h"
 
-Instruction decode(MemAccess* access);
+Instruction decode(MemAccess access);
