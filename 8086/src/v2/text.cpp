@@ -9,6 +9,7 @@ const char* get_memonic(Opcode opcode) {
         case OP_MOV: return "mov";
         case OP_ADD: return "add";
         case OP_SUB: return "sub";
+        case OP_CMP: return "cmp";
     }
 }
 
@@ -57,14 +58,12 @@ void print_operand(Operand* operand, bool is_sized, bool is_wide) {
             }
             break;
         case OP_T_ADDRESS:
+            printf("[");
             if (operand->effectiveAddress.regs[0] != REG_NONE) {
-                printf("[%s", get_reg(operand->effectiveAddress.regs[0]));
+                printf("%s", get_reg(operand->effectiveAddress.regs[0]));
                 if (operand->effectiveAddress.regs[1] != REG_NONE) {
                     printf(" + %s", get_reg(operand->effectiveAddress.regs[1]));
                 }
-            }
-            else {
-                printf("[");
             }
             printf(" %+d]", operand->effectiveAddress.displacement);
             break;
