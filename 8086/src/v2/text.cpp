@@ -10,6 +10,26 @@ const char* get_memonic(Opcode opcode) {
         case OP_ADD: return "add";
         case OP_SUB: return "sub";
         case OP_CMP: return "cmp";
+        case OP_JE: return "je";
+        case OP_JL: return "jl";
+        case OP_JLE: return "jle";
+        case OP_JB: return "jb";
+        case OP_JBE: return "jbe";
+        case OP_JP: return "jp";
+        case OP_JO: return "jo";
+        case OP_JS: return "js";
+        case OP_JNE: return "jne";
+        case OP_JNL: return "jnl";
+        case OP_JNLE: return "jnle";
+        case OP_JNB: return "jnb";
+        case OP_JNBE: return "jnbe";
+        case OP_JNP: return "jnp";
+        case OP_JNO: return "jno";
+        case OP_JNS: return "jns";
+        case OP_LOOP: return "loop";
+        case OP_LOOPZ: return "loopz";
+        case OP_LOOPNZ: return "loopnz";
+        case OP_JCXZ: return "jcxz";
     }
 }
 
@@ -35,8 +55,8 @@ const char* get_reg(Register reg) {
     }
 }
 
-void print_operand(Operand* operand, bool is_sized, bool is_wide) {
-    if (is_sized) {
+void print_operand(Operand* operand, bool is_sized, bool is_wide, bool is_rel_jmp) {
+    if (is_sized && !is_rel_jmp) {
         if (is_wide) {
             printf("word ");
         }
@@ -47,9 +67,13 @@ void print_operand(Operand* operand, bool is_sized, bool is_wide) {
 
     switch (operand->type) {
         case OP_T_REG:
-            printf("%s", get_reg(operand->reg.reg));
+            printf("%s", get_reg(operand->reg));
             break;
         case OP_T_IMMEDIATE:
+            if (is_rel_jmp) {
+                printf("$");
+            }
+
             if (operand->immediate.is_signed) {
                 printf("%+d", operand->immediate.value);
             }
@@ -80,12 +104,12 @@ void print_instruction(Instruction* instruction) {
 
     if (instruction->destination.type != OP_T_NONE) {
         printf(" ");
-        print_operand(&instruction->destination, is_sized, is_wide);
+        print_operand(&instruction->destination, is_sized, is_wide, instruction->flags.is_rel_jmp);
     }
 
     if (instruction->source.type != OP_T_NONE) {
         printf(", ");
-        print_operand(&instruction->source, is_sized, is_wide);
+        print_operand(&instruction->source, is_sized, is_wide, instruction->flags.is_rel_jmp);
     }
 
     printf("\n");
@@ -94,7 +118,7 @@ void print_instruction(Instruction* instruction) {
 void debug_operand(Operand* operand) {
     switch (operand->type) {
         case OP_T_REG:
-            printf("REG(%s)", get_reg(operand->reg.reg));
+            printf("REG(%s)", get_reg(operand->reg));
             break;
         case OP_T_IMMEDIATE:
             printf("IMM(%+d)", operand->immediate.value);

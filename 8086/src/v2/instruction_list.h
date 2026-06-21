@@ -17,6 +17,7 @@ enum PartType {
     DT_ADDR_LO,
     DT_ADDR_HI,
     DT_SR,
+    DT_INC8,
 
     DT_IMP_D,
     DT_IMP_W,

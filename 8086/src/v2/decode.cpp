@@ -9,6 +9,7 @@ typedef struct {
     u8 reg;
     u8 mod;
     u8 sr;
+    s8 rel_jmp;
     bool is_wide;
     bool is_signed;
     bool is_dest;
@@ -17,6 +18,7 @@ typedef struct {
     bool has_mod;
     bool has_addr;
     bool has_sr;
+    bool has_rel_jmp;
     bool has_data;
     bool has_wide_data;
 } InstructionData;
@@ -137,6 +139,11 @@ Instruction attempt_decode(MemAccess access, InstructionDescription* description
                 bit_index = -2;
                 data.has_sr = true;
                 break;
+            case DT_INC8:
+                data.rel_jmp = get_bits(byte, bit_index, 8);
+                bit_index -= 8;
+                data.has_rel_jmp = true;
+                break;
             case DT_IMP_D:
                 data.is_dest = part.value;
                 break;
@@ -198,7 +205,7 @@ Instruction attempt_decode(MemAccess access, InstructionDescription* description
         result.opcode = description->opcode;
         result.source = Operand{OP_T_NONE, REG_NONE};
         result.destination = Operand{OP_T_NONE, REG_NONE};
-        result.flags = Flags{is_wide, is_signed, is_dest};
+        result.flags = Flags{is_wide, is_signed, is_dest, data.has_rel_jmp};
 
         Operand *reg_op = &(is_dest ? result.destination : result.source);
         Operand *mod_op = &(is_dest ? result.source : result.destination);
@@ -237,6 +244,11 @@ Instruction attempt_decode(MemAccess access, InstructionDescription* description
                     displacement,
                 };
             }
+        }
+
+        if (data.has_rel_jmp) {
+            result.destination.type = OP_T_IMMEDIATE;
+            result.destination.immediate = Immediate{data.rel_jmp + 2, true, false};
         }
 
         if (has_data) {

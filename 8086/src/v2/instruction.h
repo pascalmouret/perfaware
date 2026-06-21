@@ -7,6 +7,26 @@ enum Opcode {
     OP_ADD,
     OP_SUB,
     OP_CMP,
+    OP_JE,
+    OP_JL,
+    OP_JLE,
+    OP_JB,
+    OP_JBE,
+    OP_JP,
+    OP_JO,
+    OP_JS,
+    OP_JNE,
+    OP_JNL,
+    OP_JNLE,
+    OP_JNB,
+    OP_JNBE,
+    OP_JNP,
+    OP_JNO,
+    OP_JNS,
+    OP_LOOP,
+    OP_LOOPZ,
+    OP_LOOPNZ,
+    OP_JCXZ,
 };
 
 enum Register {
@@ -30,10 +50,6 @@ enum Register {
 };
 
 typedef struct {
-    Register reg;
-} RegisterAccess;
-
-typedef struct {
     s32 value;
     bool is_signed;
     bool is_wide;
@@ -48,6 +64,7 @@ typedef struct {
     bool is_wide;
     bool is_signed;
     bool is_dest;
+    bool is_rel_jmp;
 } Flags;
 
 enum OperandType {
@@ -60,7 +77,7 @@ enum OperandType {
 typedef struct  {
     OperandType type;
     union {
-        RegisterAccess reg;
+        Register reg;
         Immediate immediate;
         EffectiveAddress effectiveAddress;
     };
